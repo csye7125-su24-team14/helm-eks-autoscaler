@@ -245,6 +245,7 @@ image:
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
   ##
   # image.pullSecrets -- Image pull secrets
+  privateImage: true
   pullSecrets: []
   # - myRegistrKeySecretName
 
