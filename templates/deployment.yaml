@@ -330,10 +330,11 @@ spec:
             secretName: {{ .Values.clusterAPIKubeconfigSecret }}
       {{- end }}
       {{- end }}
-      {{- if .Values.image.pullSecrets }}
+      {{- if .Values.image.privateImage }}
       imagePullSecrets:
-      {{- range .Values.image.pullSecrets }}
-        - name: {{ . }}
+        - name: {{ .Release.Name }}-docker-secret
+      # {{- range .Values.image.pullSecrets }}
+      #   - name: {{ . }}
       {{- end }}
     {{- end }}
 {{- end }}
