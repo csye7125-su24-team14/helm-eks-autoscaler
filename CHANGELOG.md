@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/csye7125-su24-team14/helm-eks-autoscaler/compare/v1.1.0...v1.1.1) (2024-07-21)
+
+
+### Bug Fixes
+
+* Created dockerfile for image mirroring ([658aacc](https://github.com/csye7125-su24-team14/helm-eks-autoscaler/commit/658aaccf183b1979fff9ab99f3ef478d8ac0901b))
+
 # [1.1.0](https://github.com/csye7125-su24-team14/helm-eks-autoscaler/compare/v1.0.1...v1.1.0) (2024-07-18)
 
 
