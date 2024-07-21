@@ -20,42 +20,63 @@ pipeline {
         stage('Create Builder and Latest Tag') {
             steps {
                 script {
-                    // LATEST_TAG = sh(script: 'git describe --tags --abbrev=0', returnStdout: true).trim()
+                    LATEST_TAG = sh(script: 'git describe --tags --abbrev=0', returnStdout: true).trim()
                     // Create and use a new builder instance
                     sh 'docker buildx create --use'
                 }
             }
         }
-        stage('Mirror Image to DockerHub') {
+        stage('Update Dockerfile') {
             steps {
                 script {
-                     withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', usernameVariable: 'DOCKER_HUB_USERNAME', passwordVariable: 'DOCKER_HUB_PASSWORD')]) {
+                    // Read the current Dockerfile
+                    def dockerfileContents = readFile 'Dockerfile'
+                    
+                    // Update the FROM line
+                    def updatedDockerfile = dockerfileContents.replaceAll(/^FROM .*/, "FROM ${env.IMAGE_NAME}:${env.IMAGE_TAG}")
+                    
+                    // Write the updated Dockerfile back
+                    writeFile file: 'Dockerfile', text: updatedDockerfile
+
+                    withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', usernameVariable: 'DOCKER_HUB_USERNAME', passwordVariable: 'DOCKER_HUB_PASSWORD')]) {
                         sh "echo ${DOCKER_HUB_PASSWORD} | docker login -u ${DOCKER_HUB_USERNAME} --password-stdin"
                     }
 
-                    // Pull the original image
-                    sh "docker pull ${env.IMAGE_REPO}:${env.IMAGE_TAG}"
-
-                    // Tag the image for your DockerHub organization
-                    sh "docker tag ${env.IMAGE_REPO}:${env.IMAGE_TAG} ${env.CLUSTER_AUTOSCALER_DOCKER_IMAGE}:${env.IMAGE_TAG}"
-                    sh "docker tag ${env.IMAGE_REPO}:${env.IMAGE_TAG} ${env.CLUSTER_AUTOSCALER_DOCKER_IMAGE}:latest"
+                    sh "docker buildx build --platform linux/amd64,linux/arm64 -t ${env.CLUSTER_AUTOSCALER_DOCKER_IMAGE}:${LATEST_TAG} -t ${env.CLUSTER_AUTOSCALER_DOCKER_IMAGE}:latest --push ."
                     
-                    // Push the image to your DockerHub organization
-                    sh "docker push ${env.CLUSTER_AUTOSCALER_DOCKER_IMAGE}:${env.IMAGE_TAG}"
                 }
             }
         }
+        // stage('Mirror Image to DockerHub') {
+        //     steps {
+        //         script {
+        //              withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', usernameVariable: 'DOCKER_HUB_USERNAME', passwordVariable: 'DOCKER_HUB_PASSWORD')]) {
+        //                 sh "echo ${DOCKER_HUB_PASSWORD} | docker login -u ${DOCKER_HUB_USERNAME} --password-stdin"
+        //             }
+
+        //             // Pull the original image
+        //             sh "docker pull ${env.IMAGE_REPO}:${env.IMAGE_TAG}"
+
+        //             // Tag the image for your DockerHub organization
+        //             sh "docker tag ${env.IMAGE_REPO}:${env.IMAGE_TAG} ${env.CLUSTER_AUTOSCALER_DOCKER_IMAGE}:${env.IMAGE_TAG}"
+        //             sh "docker tag ${env.IMAGE_REPO}:${env.IMAGE_TAG} ${env.CLUSTER_AUTOSCALER_DOCKER_IMAGE}:latest"
+                    
+        //             // Push the image to your DockerHub organization
+        //             sh "docker push ${env.CLUSTER_AUTOSCALER_DOCKER_IMAGE}:${env.IMAGE_TAG}"
+        //         }
+        //     }
+        // }
         
-        stage('Update Helm Chart') {
-            steps {
-                script {
-                    // Update the values.yaml file with the new image repository
-                    sh """
-                    sed -i 's|repository: ${env.IMAGE_REPO}|repository: ${env.CLUSTER_AUTOSCALER_DOCKER_IMAGE}|' ./values.yaml
-                    """
-                }
-            }
-        }
+        // stage('Update Helm Chart') {
+        //     steps {
+        //         script {
+        //             // Update the values.yaml file with the new image repository
+        //             sh """
+        //             sed -i 's|repository: ${env.IMAGE_REPO}|repository: ${env.CLUSTER_AUTOSCALER_DOCKER_IMAGE}|' ./values.yaml
+        //             """
+        //         }
+        //     }
+        // }
     }
     
     post {
